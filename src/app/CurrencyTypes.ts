@@ -40,3 +40,10 @@ export var CURRENCYLIST:Currency[] =
     { code: "USD", name: "US dollar"},
     { code: "ZAR", name: "South African rand"}
 ];
+
+export interface RateNode
+{
+  Date: string,
+  Sum: number,
+  Num: number
+}

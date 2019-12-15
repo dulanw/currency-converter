@@ -1,5 +1,5 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { Currency } from '../currency';
+import { Currency } from '../CurrencyTypes';
 
 @Component({
   selector: 'app-currency-selector',
@@ -38,9 +38,7 @@ export class CurrencySelectorComponent implements OnInit {
   OnChange(Value)
   {
     // this.SelectedIndex = Value;
-    // this.ChangedCurrency.emit(this.SelectableCurrencies[this.SelectedIndex]);
-    // console.log(this.SelectedCurrency);
-    console.log(Value);
+    this.ChangedCurrency.emit(this.SelectedCurrency);
   }
 
   //get the currently selected currency, returns type Currency
