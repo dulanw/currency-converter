@@ -1,0 +1,11 @@
+.currency-select {
+    max-width: 200px;
+    min-width: 200px;
+    width: 200px !important;
+}
+
+.currency-code
+{
+    float: left;
+    width: 100px;
+}

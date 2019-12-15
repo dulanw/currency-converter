@@ -1,0 +1,13 @@
+<!-- <select (change)="OnChange($event.target.value)">
+  <option *ngFor="let currency of SelectableCurrencies; index as i" value="{{i}}"> 
+    <span class="currency-logo"></span>{{currency.name}} 
+  </option>
+</select> -->
+
+<!-- binding ngModel instead of using onChange -->
+<select [(ngModel)]="SelectedCurrency" (change)="OnChange($event.target.value)">
+  <option *ngFor="let currency of SelectableCurrencies" [ngValue]="currency" [className]="'currency-select'"> 
+    <!-- trying to add an image but doesn't seem to work. -->
+    <span [className]="'currency-code'">{{currency.code}}</span>| {{currency.name}} 
+  </option>
+</select>

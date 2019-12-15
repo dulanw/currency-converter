@@ -1,0 +1,21 @@
+<table>
+    <tbody>
+        <tr>
+            <td>Amount</td>
+            <td>From</td>
+            <td></td>
+            <td>To</td>
+        </tr>
+        <tr>
+            <td><input type="text" (change)="OnChangeAmount($event)" value="1"></td>
+            <td><app-currency-selector #CurrencySelectorFrom [SelectableCurrencies]=CurrencyList (ChangedCurrency)=ChangedCurrency($event)></app-currency-selector></td>
+            <td><button (click)="OnSwap()">Swap</button></td>
+            <td><app-currency-selector #CurrencySelectorTo [SelectableCurrencies]=CurrencyList (ChangedCurrency)=ChangedCurrency($event)></app-currency-selector></td>
+            <td><button (click)="OnSubmit()">></button></td>
+        </tr>
+        <tr>
+            <td colspan="10">{{ConvertionSummary}}</td>
+        </tr>
+    </tbody>
+</table>
+
