@@ -75,7 +75,16 @@ export class CurrencyGraphComponent implements OnInit {
 
     //sort it, no need to create another function since it needs to be done here once
     RateHistory.sort((a:RateNode, b:RateNode):number => {
-      if (moment(a.Date,'MM-YYYY').isAfter(moment(b.Date, 'MM-YYYY'), 'day'))
+
+      //this returns an invalid date if you don't add 01- as the day
+      let DateA = moment("01-" + a.Date, 'DD-MM-YYYY');
+      let DateB = moment("01-" + b.Date, 'DD-MM-YYYY');
+
+      if (DateA.isAfter(DateB, 'month'))
+      {
+        return -1;
+      }
+      else if (DateA.isBefore(DateB, 'month'))
       {
         return 1;
       }
