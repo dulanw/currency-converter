@@ -5,6 +5,13 @@ import * as moment from 'moment'; // <-- for date time stuff
 
 //declare var cytoscape: any;
 
+interface GraphNode
+{
+  Id: number,
+  CurrentY: number,
+  TargetY: number
+}
+
 @Component({
   selector: 'app-currency-graph',
   templateUrl: './currency-graph.component.html',
@@ -17,10 +24,16 @@ export class CurrencyGraphComponent implements OnInit {
   
   CytoscapeGraph: cytoscape;
 
+  //used for animations
+  AnimationInterval: any;
+  Nodes: GraphNode[] = [];
+  FrameTime: number = 10;
+
   constructor(private renderer : Renderer) { 
   }
 
   ngOnInit() {
+    this.AnimationUpdate = this.AnimationUpdate.bind(this);
   }
 
   ngAfterViewInit()
@@ -33,9 +46,8 @@ export class CurrencyGraphComponent implements OnInit {
           selector: 'node',
           style: {
             'background-color': '#666',
-            'label': 'data(id)',
-            'overlay-opacity': 0,
-            'resize': 'none'
+            'label': 'data(name)',
+            'overlay-opacity': 0
           }
         },
     
@@ -94,9 +106,6 @@ export class CurrencyGraphComponent implements OnInit {
       }
     });
 
-
-    let GraphElements = [];
-
     //setting the y axis range, should the first point would be half way in the axis. unlikely that the currency rate would double over a 12 month period
     let MinY = Number.POSITIVE_INFINITY;
     let MaxY = Number.NEGATIVE_INFINITY;
@@ -122,50 +131,120 @@ export class CurrencyGraphComponent implements OnInit {
     }
 
     //#TODO instead of completely removing the nodes, change the
-    this.CytoscapeGraph.remove('node')
-    for (let i = 0; i < RateHistory.length; i++)
-    {
-      let Rate = RateHistory[i].Sum/RateHistory[i].Num;
+    this.CytoscapeGraph.remove('node');
+    let GraphElements: any[] = [];
+    let NewNodes: GraphNode[] = [];
 
-      console.log(Rate);
+    for (let index = 0; index < RateHistory.length; index++)
+    {
+      let Rate = RateHistory[index].Sum/RateHistory[index].Num;
+
       //make the nodes take up the full size of the screen
-      let PosX = scale(i, RateHistory.length - 1, 0, 0.05, 0.95) * this.CytoscapeGraph.width();
-      let PosY = this.CytoscapeGraph.height() - (scale(Rate, MaxY, MinY, 0.05, 0.95) * this.CytoscapeGraph.height());
+      let PosX = scale(index, RateHistory.length - 1, 0, 0.05, 0.95) * this.CytoscapeGraph.width();
+      let PosY = (scale(Rate, MaxY, MinY, 0.05, 0.95) * this.CytoscapeGraph.height());
+
+
+      //change the animation target location
+      //#TODO interp the x position as well
+      //creating a new array and adding only the needed amount makes it easier to clean up
+      if (index < this.Nodes.length)
+      {
+        NewNodes.push(this.Nodes[index]);
+        NewNodes[index].TargetY = PosY; 
+        PosY = NewNodes[index].CurrentY;
+      }
+      else
+      {
+        NewNodes.push({Id: index, CurrentY: this.CytoscapeGraph.height() / 2, TargetY: PosY});
+        PosY = this.CytoscapeGraph.height() / 2;
+      }
+
+
+      //draw the nodes
       GraphElements.push(
         {
-          data: {id: RateHistory[i].Date},
+          data: {id: index, name: `${RateHistory[index].Date}, ${Rate.toPrecision(4)}`},
           grabbable: false,
-          position: { x: PosX, y: PosY},
-          label: RateHistory[i].Date + '1'
+          position: { x: PosX, y: PosY}
         });
 
-      if (i > 0)
+      //draw the lines
+      if (index > 0)
       {
-        GraphElements.push( { data: {source: RateHistory[i - 1].Date, target: RateHistory[i].Date } } );
+        GraphElements.push( { data: {source: index - 1, target: index } } );
       }
     }
 
+    this.Nodes = NewNodes;
+
     //#TODO might have to clear this
     this.CytoscapeGraph.add(GraphElements);
+    this.StartAnimationUpdates();
+    //console.log(this);
   }
-}
 
-// list of graph elements to start with
-        // { // node a
-        //   data: { id: 'a' },
-        //   grabbable: false,
-        //   position: { x: 0, y: 0 }
-        // },
-        // { // node b
-        //   data: { id: 'b'},
-        //   grabbable: false,
-        //   position: { x: 0, y: 0 }
-        // },
-        // { // node b
-        //   data: { id: 'c' },
-        //   grabbable: false,
-        //   position: { x: 0, y: 0 }
-        // },
-        // { // edge ab 
-        //   data: { id: 'ab', source: 'a', target: 'b' }
-        // }
+  StartAnimationUpdates()
+  {
+    this.StopAnimationUpdate();
+    this.AnimationInterval = setInterval(this.AnimationUpdate, this.FrameTime);
+  }
+
+  StopAnimationUpdate()
+  {
+    if (this.AnimationInterval)
+    {
+      clearInterval(this.AnimationInterval);
+      this.AnimationInterval = null;
+    }
+  }
+
+  AnimationUpdate()
+  {
+    //ue4 style constant interpolation
+    let Clamp = (num, min, max) : number =>
+    {
+      return num <= min ? min : num >= max ? max : num;
+    }
+    //ue4 style constant interpolation
+    let InterpConstantTo = (Current : number, Target : number, DeltaTime : number, InterpSpeed : number) : number =>
+    {
+      const Dist : number = Target - Current;
+
+      // If distance is too small, just set the desired location
+      if( Dist*Dist < Number.MIN_VALUE)
+      {
+        return Target;
+      }
+
+      const Step : number = InterpSpeed * DeltaTime;
+      return Current + Clamp(Dist, -Step, Step);
+    }
+
+    //let Node = this.Nodes[0];
+    //Node.CurrentY = InterpConstantTo(Node.CurrentY, Node.TargetY, this.FrameTime, 0.1);
+    //this.CytoscapeGraph.$(`#${Node.Id}`).position('y', Node.CurrentY);
+
+    //console.log(Node.CurrentY, Node.TargetY);
+
+    let StopAnimation = true;
+    for (let Node of this.Nodes)
+    {
+      //let y = this.CytoscapeGraph.$(Node.Id).position('x');
+      Node.CurrentY = InterpConstantTo(Node.CurrentY, Node.TargetY, this.FrameTime, 1);
+
+      this.CytoscapeGraph.$(`#${Node.Id}`).position('y', Node.CurrentY);
+
+      if (Node.CurrentY !== Node.TargetY)
+      {
+        StopAnimation = false;
+      }
+    }
+
+    if (StopAnimation)
+    {
+      console.log("Stopped Animation");
+      this.StopAnimationUpdate();
+    }
+  }
+
+}
